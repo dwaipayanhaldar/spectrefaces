@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/postcss';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: '/eigenfaces-linear-carousel/',
+  base: '/spectrefaces/',
   root: resolve(import.meta.dirname, 'github-pages'),
   publicDir: resolve(import.meta.dirname, 'public'),
   resolve: {

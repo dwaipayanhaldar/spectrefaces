@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    'https://eigenfaces-linear-carousel.csprofkgd.chatgpt.site',
+    'https://dwaipayanhaldar.github.io/spectrefaces',
   ),
   title: 'Eigenfaces vs SpectreFaces — Face It: It’s Just Linear Algebra',
   description:

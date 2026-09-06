@@ -2,7 +2,7 @@
 
 An interactive PCA reconstruction that presents the mean face and the first 24 principal components in a responsive linear carousel.
 
-[Open the GitHub Pages site](https://csprofkgd.github.io/eigenfaces-linear-carousel/)
+[Open the GitHub Pages site](https://dwaipayanhaldar.github.io/spectrefaces/)
 
 ## Development
 
