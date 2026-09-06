@@ -5,11 +5,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     'https://eigenfaces-linear-carousel.csprofkgd.chatgpt.site',
   ),
-  title: 'Eigenfaces — Face It: It’s Just Linear Algebra',
+  title: 'Eigenfaces vs SpectreFaces — Face It: It’s Just Linear Algebra',
   description:
     'Explore a face reconstructed as an average plus 24 adjustable principal components in a looping linear carousel.',
   openGraph: {
-    title: 'Eigenfaces',
+    title: 'Eigenfaces vs SpectreFaces',
     description: 'Face It: It’s Just Linear Algebra',
     type: 'website',
     images: [
@@ -17,13 +17,13 @@ export const metadata: Metadata = {
         url: '/og.png',
         width: 1731,
         height: 909,
-        alt: 'Eigenfaces — Face It: It’s Just Linear Algebra',
+        alt: 'Eigenfaces vs SpectreFaces — Face It: It’s Just Linear Algebra',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Eigenfaces',
+    title: 'Eigenfaces vs SpectreFaces',
     description: 'Face It: It’s Just Linear Algebra',
     images: ['/og.png'],
   },

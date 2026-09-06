@@ -1,17 +1,30 @@
-Flickr-Faces-HQ (FFHQ) attribution
+Extended Yale Face Database B (Cropped) attribution
 
-This non-commercial educational visualization uses a deterministic sample of
-FFHQ aligned 128 × 128 thumbnails to derive an average face and PCA basis.
-The source images were converted to grayscale and the displayed artifacts are
-derived reconstructions and principal components.
+This non-commercial educational visualization uses the Extended Yale Face
+Database B, Cropped (38 subjects, ~64 frontal illuminations/subject,
+pre-cropped and pre-aligned to 192x168 by the database's original curators)
+to derive an average face and an ECA (Hadamard-rotated PCA) basis. Images
+were resized to 128x128 grayscale; the displayed artifacts -- mean face,
+basis images, and the reconstructed example face -- are derived, not
+original photographs. The reconstructed example face is a held-out image
+from the same public dataset (see manifest.json -> portraitAlignment
+.heldOutImage), not a personal photo.
 
-Dataset: https://github.com/NVlabs/ffhq-dataset
+Dataset: http://vision.ucsd.edu/~leekc/ExtYaleDatabase/ExtYaleB.html
+(official host has been unreliable; a common mirror of the same published
+CroppedYale files is https://github.com/corehello/RPCA)
 
 Citation:
-Tero Karras, Samuli Laine, and Timo Aila. “A Style-Based Generator
-Architecture for Generative Adversarial Networks.” CVPR 2019.
+A. Georghiades, P. Belhumeur, D. Kriegman, "From Few to Many: Illumination
+Cone Models for Face Recognition under Variable Lighting and Pose," IEEE
+Trans. Pattern Analysis and Machine Intelligence, 2001.
 
-FFHQ is distributed under CC BY-NC-SA 4.0. Individual source photographs
-retain their original licenses and attribution requirements. The complete
-selected-record provenance manifest is produced by the offline build pipeline
-and retained outside the public web bundle.
+K.C. Lee, J. Ho, D. Kriegman, "Acquiring Linear Subspaces for Face
+Recognition under Variable Lighting," IEEE Trans. Pattern Analysis and
+Machine Intelligence, 2005 (extended the database to 38 subjects).
+
+The Extended Yale Face Database B is made available by Yale University for
+non-commercial research and educational use. The complete list of source
+images used to fit this basis is produced by the offline build pipeline
+(scripts/build_eigenfaces_yaleb.py) and retained outside the public web
+bundle.

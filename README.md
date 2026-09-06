@@ -1,4 +1,4 @@
-# Eigenfaces — Linear Carousel
+# Eigenfaces vs SpectreFaces — Linear Carousel
 
 An interactive PCA reconstruction that presents the mean face and the first 24 principal components in a responsive linear carousel.
 

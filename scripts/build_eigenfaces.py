@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
-"""Build deterministic FFHQ PCA assets for the Eigenfaces demo."""
+"""Build deterministic FFHQ ECA assets for the Eigenfaces demo.
+
+ECA (opposite of PCA, in the sense of maximally *de-concentrating* the
+per-coefficient variance instead of concentrating it): after fitting PCA to
+get eigenvectors U and coefficients y_pca = U^T x, additionally left-multiply
+by a normalized (orthogonal) Hadamard matrix H, giving basis U' = U @ H and
+coefficients y_eca = H^T U^T x. Reconstruction is unaffected (H is
+orthogonal and every component is kept), so this only changes how the same
+information is spread across the basis/coefficients -- see the U -> UH swap
+right after the PCA fit below.
+"""
 
 from __future__ import annotations
 
@@ -25,9 +35,13 @@ SEED = 20260902
 SIZE = 128
 SAMPLE_COUNT = 5000
 DEFAULT_COMPONENTS = 512
-MAX_COMPONENTS = 1000
+# Must be a power of 2: the U -> UH (ECA) transform below needs an exact
+# Hadamard matrix of this order. This also means the demo now always
+# reconstructs from the full (Hadamard-rotated) basis by default, since
+# DEFAULT_COMPONENTS == MAX_COMPONENTS.
+MAX_COMPONENTS = 512
 EXPOSED_COMPONENTS = 24
-CHECKPOINTS = (128, 256, 512, 1000)
+CHECKPOINTS = (128, 256, 512)
 PORTRAIT_LANDMARKS = {
     "eyeLeft": [423.0, 449.0],
     "eyeRight": [586.0, 465.0],
@@ -252,6 +266,18 @@ def write_float32(path: Path, values: np.ndarray) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def hadamard(n: int) -> np.ndarray:
+    """Exact Sylvester-construction Hadamard matrix of order n (a power of 2).
+    Symmetric by construction (H^T == H), which is used below to fold the
+    U -> UH substitution into a single left-multiply of both the basis and
+    the coefficients."""
+    assert (n & (n - 1) == 0) and n > 0, "Hadamard order must be a power of 2"
+    matrix = np.array([[1.0]])
+    while matrix.shape[0] < n:
+        matrix = np.block([[matrix, matrix], [matrix, -matrix]])
+    return matrix
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--metadata", type=Path, required=True)
@@ -298,7 +324,7 @@ def main() -> None:
         for index, key in enumerate(selected_ids):
             matrix[index] = load_gray(downloaded[key]).reshape(-1)
 
-    print("Fitting 1000-component randomized PCA…", flush=True)
+    print(f"Fitting {MAX_COMPONENTS}-component randomized PCA…", flush=True)
     pca = PCA(
         n_components=MAX_COMPONENTS,
         svd_solver="randomized",
@@ -306,18 +332,41 @@ def main() -> None:
         iterated_power=4,
     )
     pca.fit(matrix)
-    components = pca.components_.astype(np.float32)
+    components = pca.components_.astype(np.float32)  # U^T: row i is eigenvector u_i
 
     for index in range(components.shape[0]):
         pivot = int(np.argmax(np.abs(components[index])))
         if components[index, pivot] < 0:
             components[index] *= -1
 
-    cumulative = np.cumsum(pca.explained_variance_ratio_)
     portrait_image, alignment_quad = align_portrait(args.portrait, args.cache)
     portrait = portrait_image.reshape(-1)
     centered = portrait - pca.mean_.astype(np.float32)
-    weights = components @ centered
+    weights = components @ centered  # y_pca = U^T x
+
+    # --- ECA: U -> U @ H -------------------------------------------------
+    # H is a normalized (orthogonal, and for the Sylvester construction
+    # symmetric: H^T == H) Hadamard matrix. Substituting U with UH means:
+    #   (UH)^T           = H^T U^T        = H @ components
+    #   y_eca = H^T U^T x = H^T y_pca      = H @ weights
+    # Reconstruction is unaffected since every component is kept and H is
+    # orthogonal: (UH) @ (H @ weights) = U @ (H @ H) @ weights = U @ weights.
+    print(f"Applying ECA: U -> UH with a {MAX_COMPONENTS}x{MAX_COMPONENTS} Hadamard…", flush=True)
+    H = hadamard(MAX_COMPONENTS) / math.sqrt(MAX_COMPONENTS)
+    components = (H @ components).astype(np.float32)
+    weights = (H @ weights).astype(np.float32)
+
+    # A normalized Hadamard block exactly equalizes output variance: for
+    # per-axis PCA variances var_1..var_k, every one of the k mixed outputs
+    # ends up with the same variance (1/k) * sum(var_i). So unlike PCA's
+    # per-component eigenvalue/explained-variance curve, every ECA
+    # coefficient shares one common variance and the cumulative-variance
+    # curve below is linear rather than concentrated.
+    total_variance = float(pca.explained_variance_[0] / pca.explained_variance_ratio_[0])
+    avg_eigenvalue = float(pca.explained_variance_[:MAX_COMPONENTS].mean())
+    avg_explained_variance = avg_eigenvalue / total_variance
+    cumulative = avg_explained_variance * np.arange(1, MAX_COMPONENTS + 1)
+
     baseline = (
         pca.mean_.astype(np.float32)
         + components[:DEFAULT_COMPONENTS].T @ weights[:DEFAULT_COMPONENTS]
@@ -326,8 +375,8 @@ def main() -> None:
     # Cache the complete fitted basis and projection offline. The browser uses a
     # compact table of quantized prefix reconstructions so changing k only selects
     # a precomputed projection; PCA is never refit during interaction.
-    write_float32(args.cache / "components-1000.f32", components)
-    write_float32(args.cache / "portrait-weights-1000.f32", weights)
+    write_float32(args.cache / f"components-{MAX_COMPONENTS}.f32", components)
+    write_float32(args.cache / f"portrait-weights-{MAX_COMPONENTS}.f32", weights)
     prefix_reconstructions = np.empty(
         (MAX_COMPONENTS, SIZE * SIZE), dtype=np.uint8
     )
@@ -364,10 +413,11 @@ def main() -> None:
         component_records.append(
             {
                 "index": index + 1,
-                "eigenvalue": float(pca.explained_variance_[index]),
-                "explainedVariance": float(pca.explained_variance_ratio_[index]),
+                # every ECA coefficient shares the same (Hadamard-equalized) variance
+                "eigenvalue": avg_eigenvalue,
+                "explainedVariance": avg_explained_variance,
                 "baselineWeight": float(weights[index]),
-                "baselineZ": float(weights[index] / math.sqrt(pca.explained_variance_[index])),
+                "baselineZ": float(weights[index] / math.sqrt(avg_eigenvalue)),
                 "vector": f"/eigenfaces/{vector_path.name}",
                 "vectorSha256": write_float32(vector_path, vector),
                 "thumbnail": f"/eigenfaces/{thumbnail_path.name}",
@@ -426,7 +476,7 @@ def main() -> None:
     (args.output / "manifest.json").write_text(json.dumps(manifest, indent=2))
     print(
         f"Wrote assets with default={DEFAULT_COMPONENTS}, max={MAX_COMPONENTS}; "
-        f"variance@512={cumulative[511]:.4f}; variance@1000={cumulative[999]:.4f}",
+        f"variance@{MAX_COMPONENTS}={cumulative[-1]:.4f}",
         flush=True,
     )
 

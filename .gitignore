@@ -39,3 +39,8 @@ next-env.d.ts
 /outputs/
 /work/
 /.cache/
+tsconfig.tsbuildinfo
+
+# python
+__pycache__/
+*.pyc
